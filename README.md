@@ -9,6 +9,13 @@ pip install -r requirements.txt
 python -m headroom
 ```
 
+Or with Docker:
+
+```bash
+docker compose up -d        # with Redis
+docker compose up -d headroom  # app only (Redis optional)
+```
+
 ## Usage
 
 Point your LLM client at `http://localhost:8000`:
@@ -62,3 +69,27 @@ All via `HEADROOM_` env prefix:
 | `UPSTREAM_BASE_URL` | `https://api.openai.com` | LLM provider base URL |
 | `LOG_LEVEL` | `info` | Logging level |
 | `PROVIDER` | auto-detect | Force provider (`openai`, `anthropic`, `gemini`) |
+
+## Docker
+
+Build and run with Redis:
+
+```bash
+docker compose up -d
+```
+
+Set the upstream provider via `.env`:
+
+```bash
+echo HEADROOM_UPSTREAM_BASE_URL=https://api.anthropic.com >> .env
+docker compose up -d
+```
+
+Or run standalone without Redis:
+
+```bash
+docker build -t headroom .
+docker run -p 8000:8000 \
+  -e HEADROOM_UPSTREAM_BASE_URL=https://openrouter.ai/api \
+  headroom
+```
