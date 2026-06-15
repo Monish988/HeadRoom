@@ -12,8 +12,7 @@ python -m headroom
 Or with Docker:
 
 ```bash
-docker compose up -d        # with Redis
-docker compose up -d headroom  # app only (Redis optional)
+docker compose up -d
 ```
 
 ## Usage
