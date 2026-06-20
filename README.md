@@ -31,7 +31,57 @@ HEADROOM_PROVIDER=gemini HEADROOM_UPSTREAM_BASE_URL=https://generativelanguage.g
 HEADROOM_PROVIDER=openai HEADROOM_UPSTREAM_BASE_URL=https://api.openai.com python -m headroom
 ```
 
-Responses include a `_headroom` key with compression stats.
+Responses include a `_headroom` key with compression stats (char counts, token counts, timing).
+
+## Safety guardrails
+
+### Dry-run mode
+
+Compute compression metrics but forward the **original** text upstream. Useful for measuring savings without risk.
+
+```bash
+# Global (env var)
+HEADROOM_DRY_RUN=true python -m headroom
+
+# Per-request (header)
+curl -H "X-Headroom-Dry-Run: true" http://localhost:8000/v1/chat/completions ...
+```
+
+Response `_headroom` will show `dry_run: true` alongside the would-be savings.
+
+### Escape hatches
+
+**Header** — exempt an entire request from compression:
+
+```bash
+curl -H "X-Headroom-No-Compress: true" http://localhost:8000/v1/chat/completions ...
+```
+
+**Inline marker** — exempt a specific text block by embedding:
+
+```
+<!-- headroom:ignore -->
+This exact wording must be preserved verbatim.
+```
+
+Any text block containing `<!-- headroom:ignore -->` passes through unchanged. Other blocks in the same request are still compressed.
+
+### Token-count metrics
+
+`_headroom` includes `original_tokens` and `compressed_tokens` (via tiktoken for OpenAI models, heuristic fallback otherwise) — the billing unit that char counts don't capture.
+
+```json
+{
+  "_headroom": {
+    "original_chars": 1240,
+    "compressed_chars": 680,
+    "original_tokens": 310,
+    "compressed_tokens": 170,
+    "dry_run": false,
+    "exempt_blocks": 0
+  }
+}
+```
 
 ## Supported providers
 
@@ -68,6 +118,7 @@ All via `HEADROOM_` env prefix:
 | `UPSTREAM_BASE_URL` | `https://api.openai.com` | LLM provider base URL |
 | `LOG_LEVEL` | `info` | Logging level |
 | `PROVIDER` | auto-detect | Force provider (`openai`, `anthropic`, `gemini`) |
+| `DRY_RUN` | `false` | Compress for metrics only, forward original upstream |
 
 ## Docker
 
