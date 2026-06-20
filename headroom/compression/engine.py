@@ -4,6 +4,8 @@ from typing import Any
 
 import orjson
 
+HEADROOM_IGNORE_MARKER = "<!-- headroom:ignore -->"
+
 STRUCTURAL_PATTERNS = re.compile(
     r"(\{.*?\}|\[.*?\]|<[^>]+>.*?</[^>]+>)", re.DOTALL
 )
@@ -55,6 +57,11 @@ def normalize_whitespace(text: str) -> str:
     return WHITESPACE_PATTERN.sub(" ", text).strip()
 
 
+def is_exempt(text: str) -> bool:
+    """Return True if *text* contains the headroom:ignore escape-hatch marker."""
+    return HEADROOM_IGNORE_MARKER in text
+
+
 def deduplicate_lines(text: str) -> str:
     seen: set[str] = set()
     lines = []
@@ -68,8 +75,18 @@ def deduplicate_lines(text: str) -> str:
     return "\n".join(lines)
 
 
-def compress_text(text: str) -> tuple[str, dict[str, Any]]:
-    meta: dict[str, Any] = {"original_length": len(text)}
+def compress_text(text: str, model: str = "gpt-4") -> tuple[str, dict[str, Any]]:
+    meta: dict[str, Any] = {"original_length": len(text), "exempt": False}
+
+    if is_exempt(text):
+        meta["exempt"] = True
+        meta["compressed_length"] = len(text)
+        meta["compression_ratio"] = 0.0
+        meta["original_tokens"] = _count_tokens(text, model)
+        meta["compressed_tokens"] = meta["original_tokens"]
+        return text, meta
+
+    original_text = text
 
     structural_blocks = extract_structural_blocks(text)
     meta["structural_block_count"] = len(structural_blocks)
@@ -94,4 +111,13 @@ def compress_text(text: str) -> tuple[str, dict[str, Any]]:
     else:
         meta["compression_ratio"] = 0.0
 
+    meta["original_tokens"] = _count_tokens(original_text, model)
+    meta["compressed_tokens"] = _count_tokens(text, model)
+
     return text, meta
+
+
+def _count_tokens(text: str, model: str) -> int:
+    from headroom.tokens import count_tokens
+
+    return count_tokens(text, model)

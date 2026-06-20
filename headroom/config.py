@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     upstream_base_url: str = "https://api.openai.com"
     log_level: str = "info"
     provider: str = ""
+    dry_run: bool = False
 
     model_config = {"env_prefix": "HEADROOM_"}
 
